@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVL Tree Visualization</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background-color: #f1f6dd;
+            margin: 0;
+            padding: 20px;
+        }
+        h2 {
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        input, button {
+            padding: 12px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        input {
+            width: 200px;
+            border: 2px solid #007bff;
+            outline: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        input:focus {
+            border-color: #21b1e0;
+            box-shadow: 0 0 5px rgba(44, 157, 238, 0.5);
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.3);
+        }
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.5);
+        }
+        canvas {
+            border: 2px solid #007bff;
+            background-color: #ffffff;
+            display: block;
+            margin: 20px auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h2>AVL Tree Visualization</h2>
+    <input type="number" id="value" placeholder="Enter value">
+    <button onclick="insertNode()">Insert</button>
+    <button onclick="deleteNode()">Delete</button>
+    <canvas id="treeCanvas" width="800" height="400"></canvas>
+    
+    <script>
+        class Node {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
+                this.height = 1;
+            }
+        }
+        
+        class AVLTree {
+            constructor() {
+                this.root = null;
+            }
+
+            getHeight(node) {
+                return node ? node.height : 0;
+            }
+
+            getBalanceFactor(node) {
+                return node ? this.getHeight(node.left) - this.getHeight(node.right) : 0;
+            }
+
+            rotateRight(y) {
+                let x = y.left;
+                let T2 = x.right;
+                x.right = y;
+                y.left = T2;
+                y.height = Math.max(this.getHeight(y.left), this.getHeight(y.right)) + 1;
+                x.height = Math.max(this.getHeight(x.left), this.getHeight(x.right)) + 1;
+                return x;
+            }
+
+            rotateLeft(x) {
+                let y = x.right;
+                let T2 = y.left;
+                y.left = x;
+                x.right = T2;
+                x.height = Math.max(this.getHeight(x.left), this.getHeight(x.right)) + 1;
+                y.height = Math.max(this.getHeight(y.left), this.getHeight(y.right)) + 1;
+                return y;
+            }
+
+            insert(node, value) {
+                if (!node) return new Node(value);
+                if (value < node.value) node.left = this.insert(node.left, value);
+                else if (value > node.value) node.right = this.insert(node.right, value);
+                else return node;
+                node.height = Math.max(this.getHeight(node.left), this.getHeight(node.right)) + 1;
+                return this.rebalance(node);
+            }
+
+            delete(node, value) {
+                if (!node) return node;
+                if (value < node.value) node.left = this.delete(node.left, value);
+                else if (value > node.value) node.right = this.delete(node.right, value);
+                else {
+                    if (!node.left || !node.right) {
+                        node = node.left ? node.left : node.right;
+                    } else {
+                        let temp = this.getMinValueNode(node.right);
+                        node.value = temp.value;
+                        node.right = this.delete(node.right, temp.value);
+                    }
+                }
+                if (!node) return node;
+                node.height = Math.max(this.getHeight(node.left), this.getHeight(node.right)) + 1;
+                return this.rebalance(node);
+            }
+
+            getMinValueNode(node) {
+                while (node.left) node = node.left;
+                return node;
+            }
+
+            rebalance(node) {
+                let balance = this.getBalanceFactor(node);
+                if (balance > 1 && this.getBalanceFactor(node.left) >= 0) return this.rotateRight(node);
+                if (balance > 1 && this.getBalanceFactor(node.left) < 0) {
+                    node.left = this.rotateLeft(node.left);
+                    return this.rotateRight(node);
+                }
+                if (balance < -1 && this.getBalanceFactor(node.right) <= 0) return this.rotateLeft(node);
+                if (balance < -1 && this.getBalanceFactor(node.right) > 0) {
+                    node.right = this.rotateRight(node.right);
+                    return this.rotateLeft(node);
+                }
+                return node;
+            }
+
+            insertValue(value) {
+                this.root = this.insert(this.root, value);
+            }
+
+            deleteValue(value) {
+                this.root = this.delete(this.root, value);
+            }
+        }
+
+        let avl = new AVLTree();
+        
+        function insertNode() {
+            let value = parseInt(document.getElementById("value").value);
+            if (!isNaN(value)) {
+                avl.insertValue(value);
+                drawTree();
+            }
+        }
+
+        function deleteNode() {
+            let value = parseInt(document.getElementById("value").value);
+            if (!isNaN(value)) {
+                avl.deleteValue(value);
+                drawTree();
+            }
+        }
+
+        function drawTree() {
+            let canvas = document.getElementById("treeCanvas");
+            let ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawNode(ctx, avl.root, canvas.width / 2, 50, canvas.width / 4);
+        }
+
+        function drawNode(ctx, node, x, y, xOffset) {
+            if (!node) return;
+            const radius = 20; // Circle radius
+
+            // Draw the node
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = "#007bff"; // Node color
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "white"; // Text color
+            ctx.fillText(node.value, x - 5, y + 5);
+
+            // Draw left child
+            if (node.left) {
+                let targetX = x - xOffset;
+                let targetY = y + 50;
+                
+                // Adjusted line endpoints to connect at the edge of the circle
+                let angle = Math.atan2(targetY - y, targetX - x);
+                let startX = x + radius * Math.cos(angle);
+                let startY = y + radius * Math.sin(angle);
+                let endX = targetX - radius * Math.cos(angle);
+                let endY = targetY - radius * Math.sin(angle);
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = "#343a40"; // Line color
+                ctx.stroke();
+
+                drawNode(ctx, node.left, targetX, targetY, xOffset / 2);
+            }
+
+            // Draw right child
+            if (node.right) {
+                let targetX = x + xOffset;
+                let targetY = y + 50;
+
+                // Adjusted line endpoints
+                let angle = Math.atan2(targetY - y, targetX - x);
+                let startX = x + radius * Math.cos(angle);
+                let startY = y + radius * Math.sin(angle);
+                let endX = targetX - radius * Math.cos(angle);
+                let endY = targetY - radius * Math.sin(angle);
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = "#343a40"; // Line color
+                ctx.stroke();
+
+                drawNode(ctx, node.right, targetX, targetY, xOffset / 2);
+            }
+        }
+    </script>
+</body>
+</html>
